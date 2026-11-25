@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test red neuronal</title>
+</head>
+<body>
+
+  <style>
+    body{ background-color: antiquewhite; } 
+  </style>
+
+  <!-- 
+  1. Generar las imágenes de entrenamiento
+  2. Entrenar un nuevo modelo (encontrar patrones)
+  3. Verificar el resultado de la nueva red neuronal (x2 JSON, 1 BIN)
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.js"></script>
+  <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
+  <script>
+    //Objetos
+    let shapeClassifier //ML5
+    let canvas          //Lienzo
+    let resultsDiv      //Capa mostrar resultados
+    let inputImage      //Imagen que necesita Red Neuronal (Canvas > Imagen > Red Neuronal)
+    let clearButton     //Reiniciar lienzo
+
+    function setup(){
+      canvas = createCanvas(400, 400) //Nota: recuerda que el modelo se entrenó 64x64
+
+      let options = {
+        inputs: [64, 64, 4],
+        task: 'imageClassification'
+      }
+
+      shapeClassifier = ml5.neuralNetwork(options)
+
+      //Modelo local
+      const modelDetails = {
+        model: './iamodels-shapes/model.json',
+        metadata: './iamodels-shapes/model_meta.json',
+        weights: './iamodels-shapes/model.weights.bin'
+      }
+
+      //Canvas blanco
+      background(255)
+
+      //Botón reinicia lienzo
+      clearButton =  createButton('Limpiar')
+      clearButton.mousePressed(function(){ background(255) })
+
+      //Resultados
+      resultsDiv = createDiv('Cargando el modelo...')
+      inputImage = createGraphics(64, 64) //Esto se enviará al modelo
+
+      //Asignamos el modelo local al objeto ML5 y call back function resolvemos lo que pasará...
+      shapeClassifier.load(modelDetails, modelLoaded)
+    }
+
+    function modelLoaded(){
+      console.log('Modelo local listo')
+      
+      //Iniciar la clasificación
+      classifyImage() //El primer análisis...
+    }
+
+    function classifyImage(){
+      //Pasar el canvas al objeto Image
+      //Método copy() no solo copia directamente sino que ajusta las dimensiones
+      inputImage.copy(canvas, 0, 0, 400, 400, 0, 0, 64, 64)
+      shapeClassifier.classify({image: inputImage}, goResults)
+    }
+
+    function goResults(err, result){
+      if (err){
+        console.error(err)
+        return;
+      }
+
+      //Mostrar el resultado obtenido del modelo en el <DIV>
+      let label = result[0].label //Cuadrado, Triangulo, Circulo (datos de entrenamiento)
+      let confidence = result[0].confidence //Confianza (0 ... 1)
+      resultsDiv.html(`Forma: ${label} - confianza: ${confidence}`)
+
+      //Solicitamos al algoritmo un nuevo análisis
+      classifyImage()
+    }
+
+    //Dibujar sobre el lienzo
+    function draw(){
+      //Si el botón primario es pulsado
+      if (mouseIsPressed){
+        strokeWeight(8) //Contorno
+        line(mouseX, mouseY, pmouseX, pmouseY)
+      }
+    }
+
+  </script>
+</body>
+</html>
